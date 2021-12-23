@@ -1,49 +1,139 @@
 const ARGAN = (() => {
-  const _data = {};
+  // Create reference to the global document & performance object
+  const _d = document,
+    _p = performance;
 
-  /**  Let us calculate how long the user stays focused on the input 
-         and also how long they hover over with the mouse **/
-  const _trackTextInput = (elementId) => {
-    // Create reference to the global document object
-    const _d = document;
-
-    // Create a key for each element that we want to track
-    _data[elementId] = {};
-    _data[elementId].focusBlur = [[], []];
-    _data[elementId].mouseOverLeave = [[], []];
-
-    _d.getElementById(elementId).addEventListener("focus", () => {
-      _data[elementId].focusBlur[0].push(performance.now());
-    });
-
-    _d.getElementById(elementId).addEventListener("blur", () => {
-      _data[elementId].focusBlur[1].push(performance.now());
-    });
-
-    _d.getElementById(elementId).addEventListener("mouseover", () => {
-      _data[elementId].mouseOverLeave[0].push(performance.now());
-    });
-
-    _d.getElementById(elementId).addEventListener("mouseleave", () => {
-      _data[elementId].mouseOverLeave[1].push(performance.now());
-    });
+  const _paramTypes = {
+    string: "string",
+    bool: "boolean",
+    number: "number",
+    object: "object",
+    array: "array",
+    function: "function",
   };
 
-  const _results = () => {
-    console.log(_data);
+  const _elTypes = {
+    span: "SPAN",
+    div: "DIV",
+    input: "INPUT",
+    button: "BUTTON",
   };
 
-  // Keeps all the code above this line anonymous to the developer console.
+  const _eventTypes = {
+    c: "click",
+    fb: {
+      f: "focus",
+      b: "blur",
+    },
+    m: {
+      o: "mouseover",
+      l: "mouseleave",
+    },
+  };
+
+  const _data = {
+    meta: {},
+    trackers: {},
+  };
+
+  // Create track object function
+  const _createTrackObject = (elementId, elementType, reference) => {
+    return {
+      chunk: 1,
+      elId: elementId,
+      elType: elementType,
+      elRef: reference,
+      events: {
+        focus: [[], []],
+        mouse: [[], []],
+        clicks: [],
+      },
+      form: "",
+    };
+  };
+
+  const _clickListen = (id) => {
+    _data.trackers[id].events.clicks.push(_p.now());
+  };
+
+  const _focusListen = (id, i) => {
+    _data.trackers[id].events.focus[i].push(_p.now());
+  };
+
+  const _mouseListen = (id, i) => {
+    _data.trackers[id].events.mouse[i].push(_p.now());
+  };
+
+  // Add listeners functions
+  const _addListeners = (elementId, elementType, reference) => {
+    switch (elementType) {
+      case _elTypes.button:
+        reference.addEventListener(_eventTypes.c, () => {
+          _clickListen(elementId);
+        });
+        Object.keys(_eventTypes.m).forEach((key, i) => {
+          reference.addEventListener(_eventTypes.m[key], () => {
+            _mouseListen(elementId, i);
+          });
+        });
+        break;
+
+      case _elTypes.span:
+        Object.keys(_eventTypes.m).forEach((key, i) => {
+          reference.addEventListener(_eventTypes.m[key], () => {
+            _mouseListen(elementId, i);
+          });
+        });
+        break;
+
+      case _elTypes.input:
+        Object.keys(_eventTypes.m).forEach((key, i) => {
+          reference.addEventListener(_eventTypes.m[key], () => {
+            _mouseListen(elementId, i);
+          });
+        });
+        Object.keys(_eventTypes.fb).forEach((key, i) => {
+          reference.addEventListener(_eventTypes.fb[key], () => {
+            _focusListen(elementId, i);
+          });
+        });
+        break;
+
+      default:
+        break;
+    }
+  };
+
+  // Check conditions function
+  const _checkConditions = (elementId, elementType) => {
+    // Check if the elementId passes the check
+    const idPass = typeof elementId === _paramTypes.string;
+    const acceptedElement = Object.values(_elTypes).indexOf(elementType) > -1;
+    return idPass && acceptedElement;
+  };
+
+  // The track function
+  const _track = (elementId) => {
+    let elementRef = _d.getElementById(elementId);
+    let elementType = elementRef.nodeName;
+
+    // Check if the elementId passes the check
+    if (_checkConditions(elementId, elementType)) {
+      _data.trackers[elementId] = _createTrackObject(
+        elementId,
+        elementType,
+        elementRef
+      );
+      _addListeners(elementId, elementType, elementRef);
+    }
+  };
+
   return {
-    trackTextInput(elementId) {
-      _trackTextInput(elementId);
+    track(elementId) {
+      _track(elementId);
     },
     results() {
-      _results();
+      console.log(_data);
     },
   };
 })();
-
-// Invoke the ARGAN.trackTextInput() function to track the events
-ARGAN.trackTextInput("fname");
-ARGAN.trackTextInput("lname");
